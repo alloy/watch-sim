@@ -4,7 +4,7 @@ CC = $(shell xcrun --sdk macosx --find clang)
 SDK = $(shell xcrun --sdk macosx --show-sdk-path)
 INSTALL = $(shell xcrun --find install) -c
 
-watch-sim:
+watch-sim: watch-sim.m
 	$(CC) -isysroot $(SDK) -ObjC -fobjc-arc -framework Foundation -o watch-sim watch-sim.m
 
 all: watch-sim

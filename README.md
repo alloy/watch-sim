@@ -82,7 +82,7 @@ Defaults to `NO`.
 `-developer-dir [Xcode.app/Contents/Developer]`
 
 The installation location of an Xcode application bundle that provides support for WatchKit
-applications. (Xcode 6.2 beta 5 (6C121) at the time of writing.)
+applications.
 
 Defaults to the `DEVELOPER_DIR` environment variable, if set, or `xcode-select -p`.
 
