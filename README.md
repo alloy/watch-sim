@@ -89,5 +89,5 @@ Defaults to the `DEVELOPER_DIR` environment variable, if set, or `xcode-select -
 
 ## Random
 
-I would have called this program ‘Nanny’, as in ‘WatchKit’ -> ‘watch kid’ -> ‘nanny. Would it have
-been a stretch? Yeah, I though as much. Reality, such a major bummer.
+I would have called this program ‘Nanny’, as in ‘WatchKit’ -> ‘watch kid’ -> ‘nanny’. Would it have
+been a stretch? Yeah, I thought as much. Reality, such a major bummer.
