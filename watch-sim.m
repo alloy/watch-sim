@@ -382,7 +382,8 @@ InitImportedClasses(NSString *developerDir) {
     if (_simulator == nil) {
       SimDevice *device = nil;
       for (SimDevice *availableDevice in [[SimDeviceSetClass defaultSet] devices]) {
-        if ([availableDevice supportsFeature:kIDEWatchCompanionFeature]) {
+        // TODO For now hardcoding to use iPhone 6.
+        if ([availableDevice supportsFeature:kIDEWatchCompanionFeature] && [availableDevice.name isEqualToString:@"iPhone 6"]) {
           device = availableDevice;
           break;
         }
