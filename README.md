@@ -2,6 +2,11 @@
 
 A command-line WatchKit application launcher for the iOS Simulator.
 
+This requires an Xcode that supports WatchKit. At the time of writing, it has been successfully
+used on:
+
+* Xcode 6.2 beta 5
+* Xcode 6.3 beta 1
 
 ## Installation
 
