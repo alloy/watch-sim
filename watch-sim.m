@@ -1,6 +1,11 @@
 #import <Foundation/Foundation.h>
-#import <objc/runtime.h>
 #import <dlfcn.h>
+#import <mach-o/arch.h>
+#import <mach-o/fat.h>
+#import <mach-o/loader.h>
+#import <mach-o/swap.h>
+#import <objc/runtime.h>
+#import <stdio.h>
 
 // CoreSimulator
 
@@ -38,6 +43,12 @@
 + (BOOL)loadAllPlatformsReturningError:(NSError **)error;
 @end
 
+@interface DVTDevice : NSObject
+- (NSString *)nativeArchitecture;
+- (void)terminateWatchAppForCompanionIdentifier:(NSString *)ID options:(NSDictionary *)options;
+- (void)launchWatchAppForCompanionIdentifier:(NSString *)ID options:(NSDictionary *)options completionblock:(id)block;
+@end
+
 // DTXConnectionServices
 
 @protocol XCDTMobileIS_XPCDebuggingProcotol;
@@ -64,17 +75,12 @@ NSString * const kIDEWatchNotificationPayloadKey = @"IDEWatchNotificationPayload
 
 NSString * const kIDEWatchCompanionFeature = @"com.apple.watch.companion";
 
-@interface DVTiPhoneSimulator : NSObject // Real superclass: DVTAbstractiOSDevice
+@interface DVTiPhoneSimulator : DVTDevice // Real superclass: DVTAbstractiOSDevice
 + (instancetype)simulatorWithDevice:(SimDevice *)device;
 - (DVTFuture *)installApplicationAtPath:(DVTFilePath *)path;
 - (void)debugXPCServices:(NSArray *)services;
 - (DTXChannel *)xpcAttachServiceChannel;
 - (SimDevice *)device;
-
-// Actually defined in DVTDevice, so probably works on a physical device as
-// well.
-- (void)terminateWatchAppForCompanionIdentifier:(NSString *)ID options:(NSDictionary *)options;
-- (void)launchWatchAppForCompanionIdentifier:(NSString *)ID options:(NSDictionary *)options completionblock:(id)block;
 @end
 
 @protocol DTXAllowedRPC <NSObject>
@@ -380,24 +386,74 @@ InitImportedClasses(NSString *developerDir) {
 {
   @synchronized(self) {
     if (_simulator == nil) {
-      SimDevice *device = nil;
+      DVTiPhoneSimulator *simulator = nil;
+      NSArray *architectures = [self watchKitAppArchitectures];
       for (SimDevice *availableDevice in [[SimDeviceSetClass defaultSet] devices]) {
-        // TODO For now hardcoding to use iPhone 6.
-        if ([availableDevice supportsFeature:kIDEWatchCompanionFeature] && [availableDevice.name isEqualToString:@"iPhone 6"]) {
-          device = availableDevice;
+        simulator = [DVTiPhoneSimulatorClass simulatorWithDevice:availableDevice];
+        if ([availableDevice supportsFeature:kIDEWatchCompanionFeature]
+            && [architectures indexOfObject:simulator.nativeArchitecture] != NSNotFound) {
+          _simulator = simulator;
           break;
         }
       }
-      if (device == nil) {
+      if (_simulator == nil) {
         fprintf(stderr, "[!] Cannot find any simulator devices, please add devices in " \
                         "Xcode -> Window -> Devices.\n");
         exit(1);
       }
-      _simulator = [DVTiPhoneSimulatorClass simulatorWithDevice:device];
-      assert(_simulator != nil);
     }
   }
   return _simulator;
+}
+
+static NSString *
+NameOfArchitecture(cpu_type_t cputype, cpu_subtype_t cpusubtype) {
+  const NXArchInfo *arch_info = NXGetArchInfoFromCpuType(cputype, cpusubtype);
+  return [NSString stringWithUTF8String:arch_info->name];
+}
+
+- (NSArray *)watchKitAppArchitectures;
+{
+  FILE *executable = fopen([self.watchKitExtensionBundle.executablePath UTF8String], "rb");
+  if (executable == NULL) {
+    fprintf(stderr, "[!] Unable to open WatchKit executable (%s).\n", strerror(errno));
+    exit(1);
+  }
+
+  // Get at least size of a fat_header and two fat_arch structs (sim only has i386 and x86_64,
+  // because it's larger than a single mach_header, so we can safely fall back.
+  size_t buffer_size = sizeof(struct fat_header) + (sizeof(struct fat_arch) * 2);
+  uint8_t bytes[buffer_size];
+  size_t read_bytes = fread((void *)bytes, buffer_size, 1, executable);
+  fclose(executable);
+  if (read_bytes == 0) {
+    fprintf(stderr, "[!] Unable to read WatchKit executable (%s).\n", strerror(errno));
+    exit(1);
+  }
+
+  NSMutableArray *architectures = [NSMutableArray new];
+  struct fat_header fheader = *(struct fat_header *)bytes;
+  if (fheader.magic == FAT_MAGIC || fheader.magic == FAT_CIGAM) {
+    if (fheader.magic == FAT_CIGAM) {
+      swap_fat_header(&fheader, NX_LittleEndian);
+    }
+    struct fat_arch *archs = (struct fat_arch *)((struct fat_header *)bytes+1);
+    for (uint32_t i = 0; i < fheader.nfat_arch; i++) {
+      struct fat_arch arch = archs[i];
+      swap_fat_arch(&arch, 1, NX_LittleEndian);
+      [architectures addObject:NameOfArchitecture(arch.cputype, arch.cpusubtype)];
+    }
+  } else {
+    struct mach_header mheader = *(struct mach_header *)bytes;
+    [architectures addObject:NameOfArchitecture(mheader.cputype, mheader.cpusubtype)];
+  }
+
+  assert(architectures.count > 0);
+  if (self.verbose) {
+    printf("-> Detected architecture(s) of WatchKit executable to be: %s\n",
+           [[architectures componentsJoinedByString:@", "] UTF8String]);
+  }
+  return [architectures copy];
 }
 
 // TODO Do we maybe need to set all those build paths in the env for dSYM location, or is it just in
