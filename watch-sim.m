@@ -363,7 +363,11 @@ InitImportedClasses(NSString *developerDir) {
       NSError *error = nil;
       NSArray *plugins = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:pluginsPath
                                                                              error:&error];
-      assert(error == nil);
+      if (error) {
+        fprintf(stderr, "[!] Unable to read host application’s PlugIns directory (%s).\n",
+                        [[error description] UTF8String]);
+        exit(1);
+      }
       for (NSString *plugin in plugins) {
         if ([[plugin pathExtension] isEqualToString:@"appex"]) {
           NSString *extensionPath = [pluginsPath stringByAppendingPathComponent:plugin];
