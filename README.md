@@ -8,6 +8,9 @@ used on:
 * Xcode 6.2 beta 5
 * Xcode 6.3 beta 1
 
+And just as with Xcode, it doesn’t always boot properly the first (few) time(s)… 😭🐼 But will wait to
+see if Apple improves that before looking into it myself.
+
 ## Installation
 
 ```
