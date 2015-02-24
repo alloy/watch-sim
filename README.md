@@ -30,6 +30,9 @@ The launcher does **not** build applications, as the name implies, it is only me
 applications. As such, you will first have to create a build of your application with your favorite
 build tool and then point `watch-sim` at it.
 
+The `WatchHost.app` is your **normal** iPhone application, **not** the SockPuppet application that
+gets embedded in your normal iPhone application.
+
 
 #### Options
 
