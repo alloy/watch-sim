@@ -1,7 +1,7 @@
 PREFIX ?= /usr/local
 
-CC = $(shell xcrun --sdk macosx --find clang)
-SDK = $(shell xcrun --sdk macosx --show-sdk-path)
+CC = "$(shell xcrun --sdk macosx --find clang)"
+SDK = "$(shell xcrun --sdk macosx --show-sdk-path)"
 INSTALL = $(shell xcrun --find install) -c
 
 watch-sim: watch-sim.m
